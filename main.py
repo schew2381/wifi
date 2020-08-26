@@ -4,10 +4,9 @@ import json
 import time
 from typing import Set
 import configparser
+import flask
 
-# setup
-config = configparser.ConfigParser()
-config.read('login.ini')
+# Ignore warnings for SSL login
 urllib3.disable_warnings()
 
 
@@ -25,35 +24,45 @@ class Unify:
     def __init__(self, data):
         self.session = Session()
         self.site = self.session.post("https://192.168.1.1/api/auth/login",
-                                      data={"username": "schew2381", "password": "AkashSeijiMatt3",
-                                            "rememberMe": False}, verify=False)
+                                      data, verify=False)
+        # self.site = self.session.post("https://192.168.1.1/api/auth/login", verify=False)
         self.site = self.session.post("https://192.168.1.1/api/auth/login", verify=False)
         self.base = json.loads(self.session.get("https://192.168.1.1/proxy/network/api/s/default/stat/sta").text)
 
-        if self.base["meta"]["msg"] == "api.err.LoginRequired":
+        if self.base["meta"]["rc"] == "error" and self.base["meta"]["msg"] == "api.err.LoginRequired":
             raise LoggedInException("Not logged in yet, please retry again")
 
         self.data = self.base["data"]
 
         self.tracked = {}
 
-    # finds items to be tracked
+    # Finds items to be tracked
     def set_tracking(self, hosts: Set[str]):
         for entry in self.data:
             if "hostname" in entry and entry["hostname"] in hosts:
                 self.tracked[entry["hostname"]] = entry
 
+    # Begins tracking items and checks if server timed-out
     def start_tracking(self, interval: int):
         while True:
+            self.logged_out() # Check for server timeout
             for entry in self.tracked:
-                # print(tracking[item])
                 print(entry + ":" + str(self.tracked[entry]['rx_bytes']))
                 print('tx_bytes-r:' + str(self.tracked[entry]['tx_bytes-r']))
                 print('rx_bytes-r:' + str(self.tracked[entry]['rx_bytes-r']))
                 print()
 
-                time.sleep(interval)
+            time.sleep(interval)
 
-test = Unify()
-# test.set_tracking({"iPhone-S", "Akash-iPhone", "Matts-iPhone-8"})
-# test.start_tracking(1)
+    # Check if timed out of server login
+    def logged_out(self):
+        if self.base["meta"]["rc"] == "error" and self.base["meta"]["msg"] == "api.err.LoginRequired":
+            raise LoggedInException("Not logged in yet, please retry again")
+
+
+config = configparser.ConfigParser()
+config.read('credentials.ini')
+test = Unify({"username": config["login"]["username"], "password": config["login"]["password"],
+              "rememberMe": False})
+test.set_tracking({config["hosts"]["device1"], config["hosts"]["device2"], config["hosts"]["device3"]})
+test.start_tracking(1)
