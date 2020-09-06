@@ -4,7 +4,6 @@ import json
 import time
 from typing import Set
 import configparser
-import flask
 
 # Ignore warnings for SSL login
 urllib3.disable_warnings()
@@ -51,7 +50,6 @@ class Unify:
                 print('tx_bytes-r:' + str(self.tracked[entry]['tx_bytes-r']))
                 print('rx_bytes-r:' + str(self.tracked[entry]['rx_bytes-r']))
                 print()
-
             time.sleep(interval)
 
     # Check if timed out of server login
