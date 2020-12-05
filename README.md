@@ -1,2 +1,2 @@
 # wifi
-Byte tracker for Ubiquiti router, currently still in progress
+Byte tracker for Ubiquiti router
